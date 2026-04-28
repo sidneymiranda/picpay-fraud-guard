@@ -13,10 +13,14 @@
 
     <groupId>com.github.sidneymiranda.fraud-guard</groupId>
     <artifactId>picpay-fraud-guard</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>picpay-fraud-guard</name>
     <description>PicPay Fraud Guard - Multi-Module Project</description>
+
+    <modules>
+        <module>account-service</module>
+    </modules>
 
     <properties>
         <java.version>21</java.version>
