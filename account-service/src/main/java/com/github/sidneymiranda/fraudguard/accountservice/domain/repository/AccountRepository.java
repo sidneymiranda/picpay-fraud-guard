@@ -25,7 +25,7 @@ public interface AccountRepository {
     /**
      * Recupera uma {@link Account} pelo ID do usuário.
      *
-     * @param id UUID do usuário — mesmo ID retornado pelo Keycloak
+     * @param id UUID do usuário — mesmo ID gerado pelo provedor de identidade
      */
     Optional<Account> findById(UUID id);
 

@@ -238,7 +238,7 @@ class RegisterAccountTest {
         @Test
         @DisplayName("chama deleteUser no provedor quando eventPublisher.publish lança exceção")
         void deveCompensarNoProvedorQuandoPublicacaoFalha() {
-            doThrow(new RuntimeException("Kafka offline")).when(eventPublisher).publish(any());
+            doThrow(new RuntimeException("falha na publicação do evento")).when(eventPublisher).publish(any());
 
             assertThatThrownBy(() -> registerAccount.register(requestValido()))
                     .isInstanceOf(AccountRegistrationException.class);

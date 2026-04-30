@@ -18,7 +18,7 @@ class AccountTest {
 
     // ─── fixtures ─────────────────────────────────────────────────────────────
 
-    static final UUID   ID_KEYCLOAK  = UUID.randomUUID();
+    static final UUID   PROVIDER_ID  = UUID.randomUUID();
     static final String FULL_NAME    = "Sidney Miranda";
     static final String CPF_VALIDO   = "52998224725";
     static final String EMAIL_VALIDO = "sidney@example.com";
@@ -26,7 +26,7 @@ class AccountTest {
     /** Builder pré-configurado com todos os campos obrigatórios. */
     private Account.AccountBuilder builderValido() {
         return Account.builder()
-                .id(ID_KEYCLOAK)
+                .id(PROVIDER_ID)
                 .fullName(FULL_NAME)
                 .cpf(CPF_VALIDO)
                 .email(EMAIL_VALIDO);
@@ -43,7 +43,7 @@ class AccountTest {
         void deveCriarAccountValida() {
             Account account = builderValido().build();
 
-            assertThat(account.getId()).isEqualTo(ID_KEYCLOAK);
+            assertThat(account.getId()).isEqualTo(PROVIDER_ID);
             assertThat(account.getFullName()).isEqualTo(FULL_NAME);
             assertThat(account.getCpf().value()).isEqualTo(CPF_VALIDO);
             assertThat(account.getEmail().value()).isEqualTo(EMAIL_VALIDO);
@@ -105,7 +105,7 @@ class AccountTest {
     class CamposObrigatorios {
 
         @Test
-        @DisplayName("rejeita build sem id — deve ser o userId do Keycloak")
+        @DisplayName("rejeita build sem id — obrigatório vir do provedor de identidade")
         void deveRejeitarSemId() {
             assertThatThrownBy(() ->
                     Account.builder()
@@ -114,7 +114,7 @@ class AccountTest {
                             .email(EMAIL_VALIDO)
                             .build()
             ).isInstanceOf(NullPointerException.class)
-             .hasMessageContaining("Keycloak");
+             .hasMessageContaining("provedor de identidade");
         }
 
         @Test
@@ -122,7 +122,7 @@ class AccountTest {
         void deveRejeitarSemCpf() {
             assertThatThrownBy(() ->
                     Account.builder()
-                            .id(ID_KEYCLOAK)
+                            .id(PROVIDER_ID)
                             .fullName(FULL_NAME)
                             .email(EMAIL_VALIDO)
                             .build()
@@ -135,7 +135,7 @@ class AccountTest {
         void deveRejeitarSemEmail() {
             assertThatThrownBy(() ->
                     Account.builder()
-                            .id(ID_KEYCLOAK)
+                            .id(PROVIDER_ID)
                             .fullName(FULL_NAME)
                             .cpf(CPF_VALIDO)
                             .build()
@@ -148,7 +148,7 @@ class AccountTest {
         void deveRejeitarSemFullName() {
             assertThatThrownBy(() ->
                     Account.builder()
-                            .id(ID_KEYCLOAK)
+                            .id(PROVIDER_ID)
                             .cpf(CPF_VALIDO)
                             .email(EMAIL_VALIDO)
                             .build()
@@ -362,11 +362,11 @@ class AccountTest {
 
             Account original = builderValido().createdAt(createdAt).build();
             Account reconstituida = Account.reconstitute(
-                    ID_KEYCLOAK, FULL_NAME, CPF_VALIDO, EMAIL_VALIDO,
+                    PROVIDER_ID, FULL_NAME, CPF_VALIDO, EMAIL_VALIDO,
                     AccountType.PERSONAL, createdAt, updatedAt
             );
 
-            assertThat(reconstituida.getId()).isEqualTo(ID_KEYCLOAK);
+            assertThat(reconstituida.getId()).isEqualTo(PROVIDER_ID);
             assertThat(reconstituida.getCpf()).isEqualTo(original.getCpf());
             assertThat(reconstituida.getUpdatedAt()).isEqualTo(updatedAt);
         }

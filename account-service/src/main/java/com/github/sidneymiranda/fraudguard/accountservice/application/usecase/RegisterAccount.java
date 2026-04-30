@@ -23,9 +23,9 @@ import java.util.UUID;
  * <p>Orquestração:
  * <ol>
  *   <li>Valida unicidade de CPF e e-mail (RF-01) — antes de qualquer efeito colateral externo</li>
- *   <li>Cria usuário no Keycloak — senha delegada, nunca armazenada no account-service (RNF-04)</li>
- *   <li>Persiste {@link Account} no PostgreSQL — sem senha</li>
- *   <li>Publica {@link AccountCreatedEvent} no tópico Kafka {@code account.created} (RF-03)</li>
+ *   <li>Cria usuário no provedor de identidade — senha delegada, nunca armazenada no account-service (RNF-04)</li>
+ *   <li>Persiste {@link Account} no banco de dados — sem senha</li>
+ *   <li>Publica {@link AccountCreatedEvent} no barramento de eventos (RF-03)</li>
  * </ol>
  *
  * <p><b>Padrão SAGA com compensação:</b> se qualquer etapa após a criação no provedor de identidade
@@ -57,7 +57,7 @@ public class RegisterAccount {
      * @return response com o ID da conta criada
      * @throws CpfAlreadyExistsException    se o CPF já estiver cadastrado (RF-01)
      * @throws EmailAlreadyExistsException  se o e-mail já estiver cadastrado (RF-01)
-     * @throws AccountRegistrationException se o processo falhar após a criação no Keycloak
+     * @throws AccountRegistrationException se o processo falhar após a criação no provedor de identidade
      */
     public AccountCreatedResponse register(RegisterAccountRequest request) {
 

@@ -5,7 +5,7 @@ package com.github.sidneymiranda.fraudguard.accountservice.application.exception
  * após a compensação SAGA ter sido executada.
  *
  * <p>Indica que houve um erro não-recuperável durante o cadastro (ex: falha de persistência
- * ou publicação de evento), e que o usuário criado no Keycloak já foi removido para
+ * ou publicação de evento), e que o usuário criado no provedor de identidade já foi removido para
  * garantir consistência distribuída.
  */
 public class AccountRegistrationException extends RuntimeException {

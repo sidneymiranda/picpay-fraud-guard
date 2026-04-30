@@ -11,11 +11,11 @@ import java.util.UUID;
  * Evento de domínio imutável — representa o fato de que uma conta foi criada com sucesso (RF-03).
  *
  * <p>Gerado pela camada de aplicação após persistência bem-sucedida da {@link Account}.
- * Publicado no tópico Kafka {@code account.created} pelo {@code EventPublisher}.
+ * Publicado no barramento de eventos pelo {@code EventPublisher}.
  *
  * <p>Payload conforme RF-03:
  * <ul>
- *   <li>{@code userId}      — UUID da conta (mesmo ID do Keycloak)</li>
+ *   <li>{@code userId}      — UUID da conta (mesmo ID do provedor de identidade)</li>
  *   <li>{@code email}       — e-mail normalizado</li>
  *   <li>{@code createdAt}   — instant de criação</li>
  *   <li>{@code accountType} — tipo da conta (PERSONAL ou BUSINESS)</li>
@@ -54,4 +54,3 @@ public record AccountCreatedEvent(
         );
     }
 }
-

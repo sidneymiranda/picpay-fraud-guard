@@ -5,8 +5,8 @@ import com.github.sidneymiranda.fraudguard.accountservice.domain.event.AccountCr
 /**
  * Gateway de publicação de eventos — porta driven da camada de aplicação.
  *
- * <p>A implementação concreta utilizará {@code KafkaTemplate} para publicar
- * no tópico {@code account.created} (RF-03).
+ * <p>A implementação concreta será responsável por publicar
+ * o evento no barramento de eventos configurado (RF-03).
  */
 public interface EventPublisher {
 

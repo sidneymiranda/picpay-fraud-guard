@@ -13,14 +13,14 @@ import java.util.UUID;
  * <ul>
  *   <li>RF-01 — CPF válido e e-mail obrigatórios no registro</li>
  *   <li>RF-04 — apenas nome completo e e-mail são atualizáveis; CPF é imutável</li>
- *   <li>RNF-04 — senha nunca é armazenada nesta entidade (delegada ao Keycloak)</li>
+ *   <li>RNF-04 — senha nunca é armazenada nesta entidade (delegada ao provedor de identidade)</li>
  * </ul>
  *
- * <p>Uso típico na camada de aplicação (id vem do Keycloak):
+ * <p>Uso típico na camada de aplicação (id vem do provedor de identidade):
  * <pre>{@code
- * String keycloakUserId = keycloakClient.registerUser(request); // obrigatório — sem isso, Account não é criada
+ * String userId = identityProvider.createUser(request); // obrigatório — sem isso, Account não é criada
  * Account account = Account.builder()
- *     .id(UUID.fromString(keycloakUserId))  // userId retornado pelo Keycloak — obrigatório
+ *     .id(UUID.fromString(userId))  // userId gerado pelo provedor de identidade — obrigatório
  *     .fullName(request.getFullName())
  *     .cpf(request.getCpf())
  *     .email(request.getEmail())
@@ -175,8 +175,8 @@ public class Account {
         private AccountBuilder() {}
 
         /**
-         * ID da conta — obrigatório. Deve ser o ID retornado pelo Keycloak após
-         * registro bem-sucedido no realm da aplicação.
+         * ID da conta — obrigatório. Deve ser o ID gerado e retornado pelo
+         * provedor de identidade após criação bem-sucedida do usuário.
          */
         public AccountBuilder id(UUID id) {
             this.id = id;
@@ -226,7 +226,7 @@ public class Account {
          * @throws DomainException      se cpf, email ou fullName forem inválidos
          */
         public Account build() {
-            Objects.requireNonNull(id, "ID é obrigatório — deve ser o userId retornado pelo Keycloak");
+            Objects.requireNonNull(id, "ID é obrigatório — deve ser o userId gerado pelo provedor de identidade");
             Objects.requireNonNull(cpf, "CPF é obrigatório");
             Objects.requireNonNull(email, "E-mail é obrigatório");
 

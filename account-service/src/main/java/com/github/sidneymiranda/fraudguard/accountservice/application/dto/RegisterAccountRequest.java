@@ -11,7 +11,7 @@ import com.github.sidneymiranda.fraudguard.accountservice.domain.AccountType;
  * @param fullName    nome completo do titular
  * @param cpf         CPF (com ou sem formatação — sanitizado pelo domínio)
  * @param email       e-mail do titular
- * @param password    senha em texto plano — repassada ao Keycloak, nunca armazenada
+ * @param password    senha em texto plano — delegada ao provedor de identidade, nunca armazenada
  * @param accountType tipo da conta; {@code null} resulta em {@code AccountType.PERSONAL}
  */
 public record RegisterAccountRequest(
