@@ -1,3 +1,37 @@
 spring:
   application:
     name: account-service
+
+  # Configuração do banco de dados PostgreSQL
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fraudguard_account
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  # Configuração do JPA/Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Apenas valida o schema, não cria/altera (Flyway faz isso)
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+    open-in-view: false  # Desabilita para evitar lazy loading fora da transação
+
+  # Configuração do Flyway
+  flyway:
+    enabled: true
+    baseline-on-migrate: true  # Permite rodar em banco que já existe
+    locations: classpath:db/migration  # Localização dos scripts SQL
+    validate-on-migrate: true  # Valida checksums das migrations
+    out-of-order: false  # Não permite migrations fora de ordem
+    schemas: public  # Schema padrão do PostgreSQL

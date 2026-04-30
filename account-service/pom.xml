@@ -22,22 +22,25 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- ===== TRANSACTION: necessário para @Transactional nos casos de uso ===== -->
-        <!--
-            spring-tx é a dependência mínima para compilar @Transactional.
-            Não ativa transações por si só — apenas declara o contrato de design.
-            O comportamento transacional real (rollback, commit) só funciona com
-            um TransactionManager configurado (DataSourceTransactionManager ou JpaTransactionManager).
-
-            TODO (infra layer): substituir por spring-boot-starter-data-jpa, que inclui spring-tx
-            transitivamente e configura o JpaTransactionManager automaticamente.
-            spring-boot-starter-data-jdbc também suporta @Transactional via DataSourceTransactionManager
-            e é mais leve (sem Hibernate), mas o projeto usa JPA na especificação.
-            Validar comportamento transacional com Testcontainers na Fase 2.
-        -->
+        <!-- ===== PERSISTÊNCIA (específico deste módulo) ===== -->
         <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-tx</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- ===== MIGRATIONS (Flyway) ===== -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
         <!-- ===== TEST: JUnit 5 + Mockito + AssertJ ===== -->
