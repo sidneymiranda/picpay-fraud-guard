@@ -1,16 +1,18 @@
 package com.github.sidneymiranda.fraudguard.accountservice.application.usecase;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.sidneymiranda.fraudguard.accountservice.application.dto.AccountCreatedResponse;
 import com.github.sidneymiranda.fraudguard.accountservice.application.dto.RegisterAccountRequest;
 import com.github.sidneymiranda.fraudguard.accountservice.application.exception.AccountRegistrationException;
-import com.github.sidneymiranda.fraudguard.accountservice.application.gateway.EventPublisher;
 import com.github.sidneymiranda.fraudguard.accountservice.application.gateway.IdentityProvider;
 import com.github.sidneymiranda.fraudguard.accountservice.domain.Account;
 import com.github.sidneymiranda.fraudguard.accountservice.domain.AccountType;
-import com.github.sidneymiranda.fraudguard.accountservice.domain.event.AccountCreatedEvent;
 import com.github.sidneymiranda.fraudguard.accountservice.domain.exception.CpfAlreadyExistsException;
 import com.github.sidneymiranda.fraudguard.accountservice.domain.exception.EmailAlreadyExistsException;
+import com.github.sidneymiranda.fraudguard.accountservice.domain.repository.AccountOutboxRepository;
 import com.github.sidneymiranda.fraudguard.accountservice.domain.repository.AccountRepository;
+import com.github.sidneymiranda.fraudguard.accountservice.infrastructure.persistence.jpa.entity.AccountOutboxEventEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,6 +29,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -37,15 +40,17 @@ class RegisterAccountTest {
 
     // ─── fixtures ─────────────────────────────────────────────────────────────
 
-    static final String PROVIDER_ID  = UUID.randomUUID().toString();
-    static final String FULL_NAME    = "Sidney Miranda";
-    static final String CPF          = "52998224725";
-    static final String EMAIL        = "sidney@example.com";
-    static final String PASSWORD     = "s3cr3t";
+    static final String PROVIDER_ID = UUID.randomUUID().toString();
+    static final String FULL_NAME   = "Sidney Miranda";
+    static final String CPF         = "52998224725";
+    static final String EMAIL       = "sidney@example.com";
+    static final String PASSWORD    = "s3cr3t";
+    static final String PAYLOAD_JSON = "{\"userId\":\"" + PROVIDER_ID + "\"}";
 
-    @Mock AccountRepository          repository;
-    @Mock IdentityProvider           identityProvider;
-    @Mock EventPublisher             eventPublisher;
+    @Mock AccountRepository        repository;
+    @Mock AccountOutboxRepository  outboxRepository;
+    @Mock IdentityProvider         identityProvider;
+    @Mock ObjectMapper             objectMapper;
 
     @InjectMocks
     RegisterAccount registerAccount;
@@ -55,12 +60,13 @@ class RegisterAccountTest {
      * Lenient para que testes que falham antes de certas etapas não causem UnnecessaryStubbing.
      */
     @BeforeEach
-    void setUp() {
+    void setUp() throws JsonProcessingException {
         when(repository.existsByCpf(CPF)).thenReturn(false);
         when(repository.existsByEmail(EMAIL)).thenReturn(false);
         when(identityProvider.createUser(EMAIL, PASSWORD, FULL_NAME)).thenReturn(PROVIDER_ID);
-        // repository.save devolve a mesma Account recebida
         when(repository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(objectMapper.writeValueAsString(any())).thenReturn(PAYLOAD_JSON);
+        when(outboxRepository.save(any(AccountOutboxEventEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     }
 
     private RegisterAccountRequest requestValido() {
@@ -99,17 +105,18 @@ class RegisterAccountTest {
         }
 
         @Test
-        @DisplayName("publica AccountCreatedEvent após persistência bem-sucedida")
-        void devePublicarEventoAposPersistencia() {
-            ArgumentCaptor<AccountCreatedEvent> captor = ArgumentCaptor.forClass(AccountCreatedEvent.class);
+        @DisplayName("persiste AccountCreatedEvent no outbox após salvar a conta (Outbox Pattern — RF-03)")
+        void devePersistirEventoNoOutboxAposPersistirConta() {
+            ArgumentCaptor<AccountOutboxEventEntity> captor =
+                    ArgumentCaptor.forClass(AccountOutboxEventEntity.class);
 
             registerAccount.register(requestValido());
 
-            verify(eventPublisher).publish(captor.capture());
-            AccountCreatedEvent event = captor.getValue();
-            assertThat(event.userId()).isEqualTo(UUID.fromString(PROVIDER_ID));
-            assertThat(event.email()).isEqualTo(EMAIL);
-            assertThat(event.accountType()).isEqualTo(AccountType.PERSONAL);
+            verify(outboxRepository).save(captor.capture());
+            AccountOutboxEventEntity outboxEvent = captor.getValue();
+            assertThat(outboxEvent.getUserId()).isEqualTo(UUID.fromString(PROVIDER_ID));
+            assertThat(outboxEvent.getTopic()).isEqualTo("account.created");
+            assertThat(outboxEvent.getPayload()).isEqualTo(PAYLOAD_JSON);
         }
 
         @Test
@@ -149,13 +156,13 @@ class RegisterAccountTest {
         }
 
         @Test
-        @DisplayName("persiste a Account antes de publicar o evento")
-        void devePersistirAntesDePublicarEvento() {
+        @DisplayName("persiste a conta antes de gravar no outbox — garante atomicidade")
+        void devePersistirContaAntesDeGravarNoOutbox() {
             registerAccount.register(requestValido());
 
-            var inOrder = inOrder(repository, eventPublisher);
-            inOrder.verify(repository).save(any());
-            inOrder.verify(eventPublisher).publish(any());
+            var inOrder = inOrder(repository, outboxRepository);
+            inOrder.verify(repository).save(any(Account.class));
+            inOrder.verify(outboxRepository).save(any(AccountOutboxEventEntity.class));
         }
     }
 
@@ -236,9 +243,21 @@ class RegisterAccountTest {
         }
 
         @Test
-        @DisplayName("chama deleteUser no provedor quando eventPublisher.publish lança exceção")
-        void deveCompensarNoProvedorQuandoPublicacaoFalha() {
-            doThrow(new RuntimeException("falha na publicação do evento")).when(eventPublisher).publish(any());
+        @DisplayName("chama deleteUser no provedor quando persistência no outbox lança exceção")
+        void deveCompensarNoProvedorQuandoPersistenciaNoOutboxFalha() {
+            when(outboxRepository.save(any())).thenThrow(new RuntimeException("outbox indisponível"));
+
+            assertThatThrownBy(() -> registerAccount.register(requestValido()))
+                    .isInstanceOf(AccountRegistrationException.class);
+
+            verify(identityProvider).deleteUser(PROVIDER_ID);
+        }
+
+        @Test
+        @DisplayName("chama deleteUser no provedor quando serialização do evento no outbox falha")
+        void deveCompensarNoProvedorQuandoSerializacaoDoEventoFalha() throws JsonProcessingException {
+            when(objectMapper.writeValueAsString(any()))
+                    .thenThrow(new JsonProcessingException("serialization error") {});
 
             assertThatThrownBy(() -> registerAccount.register(requestValido()))
                     .isInstanceOf(AccountRegistrationException.class);
@@ -258,14 +277,14 @@ class RegisterAccountTest {
         }
 
         @Test
-        @DisplayName("eventPublisher nunca é chamado quando repository.save falha")
-        void naoDevePublicarEventoQuandoSaveFalha() {
+        @DisplayName("outbox nunca é gravado quando repository.save falha")
+        void naoDeveGravarOutboxQuandoSaveFalha() {
             when(repository.save(any())).thenThrow(new RuntimeException("DB offline"));
 
             assertThatThrownBy(() -> registerAccount.register(requestValido()))
                     .isInstanceOf(AccountRegistrationException.class);
 
-            verifyNoInteractions(eventPublisher);
+            verifyNoInteractions(outboxRepository);
         }
 
         @Test
